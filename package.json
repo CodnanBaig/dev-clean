@@ -1,0 +1,54 @@
+{
+  "name": "dev-clean",
+  "version": "0.1.1",
+  "description": "Scan and clean heavy JS/Next.js dev artifacts (node_modules, .next, build caches) safely",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "bin": {
+    "dev-clean": "bin/dev-clean.js"
+  },
+  "files": [
+    "dist",
+    "bin"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/cli.ts",
+    "prepublishOnly": "pnpm run build"
+  },
+  "keywords": [
+    "cli",
+    "disk",
+    "cleanup",
+    "node_modules",
+    "next.js"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/CodnanBaig/dev-clean.git"
+  },
+  "bugs": {
+    "url": "https://github.com/CodnanBaig/dev-clean/issues"
+  },
+  "homepage": "https://github.com/CodnanBaig/dev-clean#readme",
+  "dependencies": {
+    "chalk": "^5.4.1",
+    "commander": "^13.1.0",
+    "execa": "^9.5.2",
+    "fast-glob": "^3.3.3",
+    "inquirer": "^9.3.7",
+    "micromatch": "^4.0.8",
+    "ora": "^8.2.0",
+    "p-limit": "^6.2.0"
+  },
+  "devDependencies": {
+    "@types/micromatch": "^4.0.9",
+    "@types/inquirer": "^9.0.7",
+    "@types/node": "^22.13.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  }
+}
