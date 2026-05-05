@@ -56,15 +56,42 @@ dev-clean scan --sort name
 dev-clean scan --skip-recent-days 14
 ```
 
+### One directory only
+
+Point every command at a single tree (or several) with **`-p` / `--path`**. Examples:
+
+```sh
+dev-clean list -p ~/Developer
+dev-clean scan -p ~/Developer/my-monorepo
+dev-clean clean -p ~/Developer/my-app --ids 0 --dry-run
+```
+
+`list` / `clean --ids` use the **same** discovery, sort, and recency rules, so ids stay aligned.
+
+### List (PM2-style ids)
+
+`dev-clean list` (alias `dev-clean ls`) prints a **table of projects with numeric ids** (largest reclaimable first by default). Use those ids with `clean --ids`.
+
+**Note:** Unlike `scan`, `list` applies the same **default recency skip as `clean`** (last 7 days on `package.json` unless you pass `--include-recent` or `--skip-recent-days`). That keeps ids in sync with what `clean --ids` will target.
+
+```sh
+dev-clean list
+dev-clean list -p ~/Projects
+dev-clean list -p ~/Code --sort name --include-recent
+dev-clean list --json
+```
+
 ### Clean
 
-1. Pick **projects** (checkbox), unless you pass `--all`.
+1. Pick **projects** (checkbox), unless you pass `--all` or **`--ids`**.
 2. Pick **artifact types** (checkbox): e.g. `node_modules`, `.next`, root logs. Skipped if you pass `--yes`, `--targets`, `--node-modules-only`, or `--build-only`.
 3. Confirm once, unless `--yes` or `--dry-run`.
 
 ```sh
 dev-clean clean
 dev-clean clean --path ~/Projects --all --dry-run
+dev-clean clean -p ~/Projects --ids 0,2 --dry-run
+dev-clean clean -p ~/Projects --ids 1 --yes --targets node_modules
 dev-clean clean --all --yes --targets node_modules,.next
 dev-clean clean --all --yes --node-modules-only
 dev-clean clean --include-recent
@@ -75,7 +102,8 @@ dev-clean clean --include-recent
 | Flag | Purpose |
 |------|---------|
 | `-p, --path <dir>` | Scan root (repeatable) |
-| `--all` | Include every matching project (skip project checkbox) |
+| `--all` | Include every matching project (skip project checkbox). Do not combine with `--ids`. |
+| `--ids <n,n>` | Pick projects by id from `dev-clean list` using the **same** `-p`, `--sort`, `--skip-recent-days`, `--include-recent`, and measure flags |
 | `--yes` | Skip artifact-type prompt and final confirm (still obeys `--dry-run`) |
 | `--dry-run` | Print what would be removed; no deletes |
 | `--targets <a,b>` | Non-interactive artifact list (e.g. `node_modules,.next,log_files`). Do not combine with `--node-modules-only` or `--build-only` |
@@ -83,9 +111,11 @@ dev-clean clean --include-recent
 | `--build-only` | Build outputs only (`.next`, `dist`, `build`, `.turbo`, caches, …) |
 | `--skip-recent-days <n>` | Skip projects whose `package.json` was touched within N days (default **7** when omitted; use `--include-recent` to disable) |
 | `--config <file>` | JSON config path (default `~/.devcleanrc`) |
-| `--sort size\|name` | Order projects before selection |
+| `--sort size\|name` | Order projects before selection / ids |
 
 **Flags (scan)** — same `--path`, `--config`, `--sort`; plus `--json`, `--skip-recent-days`.
+
+**Flags (list)** — same `--path`, `--config`, `--sort`, `--skip-recent-days`, `--include-recent`, `--node-modules-only`, `--build-only`, `--json` as `list`.
 
 Allowed `--targets` / checkbox ids: `node_modules`, `.next`, `dist`, `build`, `.turbo`, `coverage`, `.nuxt`, `out`, `storybook-static`, `.parcel-cache`, `.vite`, `logs`, `.cache`, `log_files`.
 

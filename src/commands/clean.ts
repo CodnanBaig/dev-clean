@@ -1,15 +1,12 @@
 import chalk from "chalk";
 import inquirer from "inquirer";
 import ora from "ora";
-import { discoverProjects } from "../lib/discover.js";
-import { measureProjects, type MeasureFilter } from "../lib/measure.js";
 import { formatBytes } from "../lib/format.js";
-import { mergeScanRoots, loadConfigFile } from "../lib/config.js";
-import { filterProjectsByRecency } from "../lib/recent.js";
 import { deleteProjectTarget } from "../lib/delete-targets.js";
 import type { MeasuredProject, ProjectTarget, SortKey } from "../lib/types.js";
 import { isCleanTargetId } from "../lib/constants.js";
 import { labelForTargetName } from "../lib/target-labels.js";
+import { getSortedProjectCandidates } from "../lib/project-pipeline.js";
 
 export interface CleanOptions {
   path: string[];
@@ -17,6 +14,8 @@ export interface CleanOptions {
   yes?: boolean;
   dryRun?: boolean;
   all?: boolean;
+  /** Select projects by id from `dev-clean list` (same flags). Incompatible with --all. */
+  projectIds?: number[];
   nodeModulesOnly?: boolean;
   buildOnly?: boolean;
   /** Comma-parsed from CLI; skips interactive artifact prompt */
@@ -24,19 +23,6 @@ export interface CleanOptions {
   skipRecentDays?: number;
   includeRecent?: boolean;
   sort?: SortKey;
-}
-
-function sortProjects(
-  projects: MeasuredProject[],
-  sort: SortKey
-): MeasuredProject[] {
-  const copy = [...projects];
-  if (sort === "name") {
-    copy.sort((a, b) => a.root.localeCompare(b.root));
-  } else {
-    copy.sort((a, b) => b.totalReclaimableBytes - a.totalReclaimableBytes);
-  }
-  return copy;
 }
 
 function aggregateTargetStats(
@@ -72,61 +58,71 @@ function filterProjectsByTargetNames(
     .filter((p) => p.targets.length > 0);
 }
 
-function effectiveSkipRecentDays(opts: CleanOptions, configSkip?: number): number {
-  if (opts.includeRecent) return 0;
-  if (typeof opts.skipRecentDays === "number" && !Number.isNaN(opts.skipRecentDays)) {
-    return opts.skipRecentDays;
-  }
-  if (typeof configSkip === "number" && !Number.isNaN(configSkip)) {
-    return configSkip;
-  }
-  return 7;
-}
-
 export async function runClean(opts: CleanOptions): Promise<void> {
   const { path: cliPaths } = opts;
-  const { data: config } = await loadConfigFile(opts.config);
-  const roots = mergeScanRoots(cliPaths, config);
-  const excludePatterns = config.excludePatterns ?? [];
-
-  const measureFilter: MeasureFilter = {
-    nodeModulesOnly: opts.nodeModulesOnly,
-    buildOnly: opts.buildOnly,
-  };
 
   const spinner = ora({
     text: "Scanning for projects…",
     stream: process.stderr,
   }).start();
-  const discovered = await discoverProjects(roots, excludePatterns);
-  spinner.text = "Measuring disk usage…";
-  let measured = await measureProjects(discovered, measureFilter);
-  spinner.succeed("Scan complete");
 
-  let candidates = measured.filter((p) => p.totalReclaimableBytes > 0);
-  const skipDays = effectiveSkipRecentDays(opts, config.skipRecentDays);
-  if (skipDays > 0) {
-    const before = candidates.length;
-    candidates = filterProjectsByRecency(candidates, skipDays);
-    if (!opts.yes && before !== candidates.length) {
-      console.log(
-        chalk.dim(
-          `Skipped ${before - candidates.length} recently modified project(s) (package.json mtime within ${skipDays}d). Use --include-recent to include them.`
-        )
-      );
-    }
+  let sorted: MeasuredProject[];
+  let skipRecentDays: number;
+  let recentSkippedCount: number;
+  try {
+    const r = await getSortedProjectCandidates({
+      path: cliPaths,
+      config: opts.config,
+      sort: opts.sort ?? "size",
+      skipRecentDays: opts.skipRecentDays,
+      includeRecent: opts.includeRecent,
+      nodeModulesOnly: opts.nodeModulesOnly,
+      buildOnly: opts.buildOnly,
+    });
+    sorted = r.sorted;
+    skipRecentDays = r.skipRecentDays;
+    recentSkippedCount = r.recentSkippedCount;
+  } catch (e) {
+    spinner.fail("Scan failed");
+    throw e;
   }
-
-  const sorted = sortProjects(candidates, opts.sort ?? "size");
+  spinner.succeed("Scan complete");
 
   if (sorted.length === 0) {
     console.log(chalk.yellow("Nothing to clean for the current filters."));
     return;
   }
 
+  if (
+    skipRecentDays > 0 &&
+    recentSkippedCount > 0 &&
+    !opts.yes
+  ) {
+    console.log(
+      chalk.dim(
+        `Skipped ${recentSkippedCount} recently modified project(s) (package.json mtime within ${skipRecentDays}d). Use --include-recent to include them.`
+      )
+    );
+  }
+
   let selected: MeasuredProject[];
 
-  if (opts.all) {
+  if (opts.projectIds && opts.projectIds.length > 0) {
+    const max = sorted.length - 1;
+    const unique = [...new Set(opts.projectIds)].sort((a, b) => a - b);
+    for (const id of unique) {
+      if (!Number.isInteger(id) || id < 0 || id > max) {
+        console.log(
+          chalk.red(
+            `Invalid project id ${id}. Run \`dev-clean list\` with the same -p/--path, --sort, --skip-recent-days, --include-recent, and measure flags. Valid ids: 0–${max}.`
+          )
+        );
+        process.exitCode = 1;
+        return;
+      }
+    }
+    selected = unique.map((i) => sorted[i]!);
+  } else if (opts.all) {
     selected = sorted;
   } else {
     const { picks } = await inquirer.prompt<{ picks: string[] }>([
@@ -140,7 +136,7 @@ export async function runClean(opts: CleanOptions): Promise<void> {
           checked: false,
         })),
         validate: (ans: string[]) =>
-          ans.length > 0 || "Pick at least one project (or use --all)",
+          ans.length > 0 || "Pick at least one project (or use --all / --ids)",
       },
     ]);
     selected = sorted.filter((p) => picks.includes(p.root));

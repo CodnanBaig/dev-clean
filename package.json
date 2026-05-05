@@ -1,6 +1,6 @@
 {
   "name": "dev-clean",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Scan and clean heavy JS/Next.js dev artifacts (node_modules, .next, build caches) safely",
   "type": "module",
   "engines": {
