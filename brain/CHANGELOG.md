@@ -1,5 +1,10 @@
 # brain / CHANGELOG
 
+## 0.1.3 — 2026-05-08
+
+- Removed the implicit 7-day recency filter. `scan`, `list`, and `clean` now include recent projects by default.
+- Recency filtering runs only when explicitly set with `--skip-recent-days`. Updated CLI help and README.
+
 ## 0.1.2 — 2026-05-04
 
 - **`dev-clean list`** (alias **`ls`**): PM2-style table with numeric **project ids**, `--json` with ids, same filters as `clean` so ids match **`clean --ids`**.

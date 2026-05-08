@@ -104,7 +104,7 @@ program
   .option("--sort <by>", "size or name", parseSort, "size" as SortKey)
   .option(
     "--skip-recent-days <n>",
-    "same meaning as clean: hide recently touched projects (default 7 via config when omitted)",
+    "same meaning as clean: hide recently touched projects only when explicitly set",
     parseDays
   )
   .option(
@@ -163,12 +163,12 @@ program
   )
   .option(
     "--skip-recent-days <n>",
-    "skip projects modified within N days (default 7, overridden by config)",
+    "skip projects modified within N days (no default filter unless set)",
     parseDays
   )
   .option(
     "--include-recent",
-    "include recently modified projects (disables default skip)"
+    "include recently modified projects (overrides --skip-recent-days)"
   )
   .option("--sort <by>", "size or name", parseSort, "size" as SortKey)
   .action(async (cmdOpts: {

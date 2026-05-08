@@ -72,7 +72,7 @@ dev-clean clean -p ~/Developer/my-app --ids 0 --dry-run
 
 `dev-clean list` (alias `dev-clean ls`) prints a **table of projects with numeric ids** (largest reclaimable first by default). Use those ids with `clean --ids`.
 
-**Note:** Unlike `scan`, `list` applies the same **default recency skip as `clean`** (last 7 days on `package.json` unless you pass `--include-recent` or `--skip-recent-days`). That keeps ids in sync with what `clean --ids` will target.
+**Note:** `list` and `clean --ids` use the same recency behavior. There is **no default recency skip**; projects are hidden only if you explicitly pass `--skip-recent-days`.
 
 ```sh
 dev-clean list
@@ -109,7 +109,7 @@ dev-clean clean --include-recent
 | `--targets <a,b>` | Non-interactive artifact list (e.g. `node_modules,.next,log_files`). Do not combine with `--node-modules-only` or `--build-only` |
 | `--node-modules-only` | Only `node_modules` |
 | `--build-only` | Build outputs only (`.next`, `dist`, `build`, `.turbo`, caches, …) |
-| `--skip-recent-days <n>` | Skip projects whose `package.json` was touched within N days (default **7** when omitted; use `--include-recent` to disable) |
+| `--skip-recent-days <n>` | Skip projects whose `package.json` was touched within N days (only when set) |
 | `--config <file>` | JSON config path (default `~/.devcleanrc`) |
 | `--sort size\|name` | Order projects before selection / ids |
 

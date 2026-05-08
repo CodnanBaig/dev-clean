@@ -113,22 +113,6 @@ export async function runClean(opts: CleanOptions): Promise<void> {
     );
   }
 
-  if (!opts.yes && skipRecentDays === 0) {
-    const interactiveProjectPick =
-      !opts.all && (!opts.projectIds || opts.projectIds.length === 0);
-    if (
-      interactiveProjectPick &&
-      opts.includeRecent !== true &&
-      typeof opts.skipRecentDays !== "number"
-    ) {
-      console.log(
-        chalk.dim(
-          "Including recently modified projects (interactive mode). Use --skip-recent-days N to hide them."
-        )
-      );
-    }
-  }
-
   let selected: MeasuredProject[];
 
   if (opts.projectIds && opts.projectIds.length > 0) {

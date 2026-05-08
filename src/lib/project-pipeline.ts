@@ -35,7 +35,7 @@ export function effectiveSkipRecentDaysForClean(
     ProjectPipelineOpts,
     "includeRecent" | "skipRecentDays"
   >,
-  configSkip?: number
+  _configSkip?: number
 ): number {
   if (opts.includeRecent) return 0;
   if (
@@ -44,10 +44,7 @@ export function effectiveSkipRecentDaysForClean(
   ) {
     return opts.skipRecentDays;
   }
-  if (typeof configSkip === "number" && !Number.isNaN(configSkip)) {
-    return configSkip;
-  }
-  return 7;
+  return 0;
 }
 
 export async function getSortedProjectCandidates(
