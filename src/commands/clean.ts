@@ -70,6 +70,13 @@ export async function runClean(opts: CleanOptions): Promise<void> {
   let skipRecentDays: number;
   let recentSkippedCount: number;
   try {
+    const interactiveProjectPick =
+      !opts.all && (!opts.projectIds || opts.projectIds.length === 0);
+    const explicitlyRequestedRecencyBehavior =
+      typeof opts.skipRecentDays === "number" || opts.includeRecent === true;
+    const applyRecencyFilter =
+      !interactiveProjectPick || explicitlyRequestedRecencyBehavior || opts.yes === true;
+
     const r = await getSortedProjectCandidates({
       path: cliPaths,
       config: opts.config,
@@ -78,6 +85,7 @@ export async function runClean(opts: CleanOptions): Promise<void> {
       includeRecent: opts.includeRecent,
       nodeModulesOnly: opts.nodeModulesOnly,
       buildOnly: opts.buildOnly,
+      applyRecencyFilter,
     });
     sorted = r.sorted;
     skipRecentDays = r.skipRecentDays;
@@ -103,6 +111,22 @@ export async function runClean(opts: CleanOptions): Promise<void> {
         `Skipped ${recentSkippedCount} recently modified project(s) (package.json mtime within ${skipRecentDays}d). Use --include-recent to include them.`
       )
     );
+  }
+
+  if (!opts.yes && skipRecentDays === 0) {
+    const interactiveProjectPick =
+      !opts.all && (!opts.projectIds || opts.projectIds.length === 0);
+    if (
+      interactiveProjectPick &&
+      opts.includeRecent !== true &&
+      typeof opts.skipRecentDays !== "number"
+    ) {
+      console.log(
+        chalk.dim(
+          "Including recently modified projects (interactive mode). Use --skip-recent-days N to hide them."
+        )
+      );
+    }
   }
 
   let selected: MeasuredProject[];

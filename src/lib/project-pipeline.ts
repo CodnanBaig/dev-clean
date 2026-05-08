@@ -13,6 +13,8 @@ export interface ProjectPipelineOpts {
   includeRecent?: boolean;
   nodeModulesOnly?: boolean;
   buildOnly?: boolean;
+  /** If false, do not hide recent projects (interactive clean default). */
+  applyRecencyFilter?: boolean;
 }
 
 export function sortProjectsByKey(
@@ -70,7 +72,10 @@ export async function getSortedProjectCandidates(
   const measured = await measureProjects(discovered, measureFilter);
 
   let candidates = measured.filter((p) => p.totalReclaimableBytes > 0);
-  const skipDays = effectiveSkipRecentDaysForClean(opts, config.skipRecentDays);
+  const applyRecencyFilter = opts.applyRecencyFilter ?? true;
+  const skipDays = applyRecencyFilter
+    ? effectiveSkipRecentDaysForClean(opts, config.skipRecentDays)
+    : 0;
   const before = candidates.length;
   if (skipDays > 0) {
     candidates = filterProjectsByRecency(candidates, skipDays);
