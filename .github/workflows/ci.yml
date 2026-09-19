@@ -1,0 +1,46 @@
+name: Safety and package verification
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: safety-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node: [20, 22]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run build
+      - run: pnpm run check:advanced
+      - run: pnpm test
+      - name: Verify packaged advanced and legacy binaries
+        shell: bash
+        run: |
+          npm pack --ignore-scripts
+          mkdir .package-check
+          tar -xzf dev-clean-0.2.0.tgz -C .package-check
+          node .package-check/package/bin/dev-clean.js advanced-help
+          test -f .package-check/package/dist/cli.js
+          node bin/dev-clean.js --version
+      - name: Dependency advisory report
+        run: pnpm audit --prod --audit-level high
