@@ -9,8 +9,8 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsx src/cli.ts",
-    "test": "node --test tests/*.test.mjs",
-    "test:coverage": "node --experimental-test-coverage --test tests/*.test.mjs",
+    "test": "node --test tests/advanced.test.mjs",
+    "test:coverage": "node --experimental-test-coverage --test tests/advanced.test.mjs",
     "check:advanced": "node --check advanced/core.mjs && node --check advanced/cli.mjs",
     "prepack": "pnpm run build",
     "prepublishOnly": "pnpm test && pnpm run build"

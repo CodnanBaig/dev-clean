@@ -1,11 +1,14 @@
 name: Safety and package verification
 on:
   push:
-    branches: [main, feat/advanced-safe-cleanup]
+    branches: [main]
   pull_request:
   workflow_dispatch:
 permissions:
   contents: read
+concurrency:
+  group: safety-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   verify:
     strategy:
@@ -17,6 +20,8 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: pnpm/action-setup@v4
         with:
           version: 10
@@ -31,11 +36,11 @@ jobs:
       - name: Verify packaged advanced and legacy binaries
         shell: bash
         run: |
-          npm pack --ignore-scripts --pack-destination "$RUNNER_TEMP"
-          mkdir "$RUNNER_TEMP/package-check"
-          tar -xzf "$RUNNER_TEMP/dev-clean-0.2.0.tgz" -C "$RUNNER_TEMP/package-check"
-          node "$RUNNER_TEMP/package-check/package/bin/dev-clean.js" advanced-help
-          test -f "$RUNNER_TEMP/package-check/package/dist/cli.js"
+          npm pack --ignore-scripts
+          mkdir .package-check
+          tar -xzf dev-clean-0.2.0.tgz -C .package-check
+          node .package-check/package/bin/dev-clean.js advanced-help
+          test -f .package-check/package/dist/cli.js
           node bin/dev-clean.js --version
       - name: Dependency advisory report
         run: pnpm audit --prod --audit-level high
